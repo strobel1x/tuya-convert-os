@@ -4,7 +4,7 @@ import logging
 
 from typing import Awaitable, List, Optional
 
-from tornado.escape import json_decode
+from tornado.escape import json_decode, to_unicode
 from tornado.httpclient import AsyncHTTPClient, HTTPClientError
 from tornado.web import Application, RequestHandler, HTTPError
 from tornado.websocket import WebSocketHandler
@@ -97,14 +97,13 @@ class FirmwareProxyHandler(RequestHandler):
             await self.finish(response.body)
 
 class LogHandler(WebSocketHandler):
-    def __init__(self) -> None:
-        self.connected = False
+    connected = False
 
     async def tail(self):
         self.process = Subprocess(["journalctl", "-u", "tcfrontend", "-f"], stdout=Subprocess.STREAM)
         while self.connected:
             line = await self.process.stdout.read_until(b"\n")
-            self.write_message(line)
+            self.write_message(to_unicode(line) + u"\n")
 
     def start_tail(self) -> None:
         IOLoop.current().spawn_callback(self.tail)
