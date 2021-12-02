@@ -2,11 +2,14 @@
 import os
 import logging
 
-from typing import List
+from typing import Awaitable, List, Optional
 
 from tornado.escape import json_decode
 from tornado.httpclient import AsyncHTTPClient, HTTPClientError
 from tornado.web import Application, RequestHandler, HTTPError
+from tornado.websocket import WebSocketHandler
+from tornado.ioloop import IOLoop
+from tornado.process import Subprocess
 
 from tcfrontend import states
 from tcfrontend import tccontrol
@@ -93,13 +96,33 @@ class FirmwareProxyHandler(RequestHandler):
             self.set_header('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0')
             await self.finish(response.body)
 
+class LogHandler(WebSocketHandler):
+    def __init__(self) -> None:
+        self.connected = False
+
+    async def tail(self):
+        self.process = Subprocess(["journalctl", "-u", "tcfrontend", "-f"], stdout=Subprocess.STREAM)
+        while self.connected:
+            line = await self.process.stdout.read_until(b"\n")
+            self.write_message(line)
+
+    def start_tail(self) -> None:
+        IOLoop.current().spawn_callback(self.tail)
+
+    def open(self) -> None:
+        self.connected = True
+        self.start_tail()
+
+    def on_close(self) -> None:
+        self.connected = False
 
 def make_handlers() -> List[tuple]:
     return [
         (r'/', MainPageHandler),
         (r'/status', StatusHandler),
         (r'/firmware/original.bin', FirmwareOriginalHandler),
-        (r'/firmware/proxy', FirmwareProxyHandler)
+        (r'/firmware/proxy', FirmwareProxyHandler),
+        (r'/logs', LogHandler)
     ]
 
 

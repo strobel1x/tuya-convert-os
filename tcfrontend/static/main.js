@@ -861,6 +861,14 @@ function validateFirmware(content) {
     }
 }
 
+function initLogs() {
+    let logBox = document.getElementById("log-box")
+    let ws = new WebSocket("ws://" + window.location.host + "/logs")
+    ws.onmessage = function(ev) {
+        logBox.append(ev.data)
+    }
+}
+
 
 /* Main stuff */
 
@@ -868,6 +876,7 @@ function init() {
     Disclaimer.init()
     initFirmware()
     initStatus()
+    initLogs()
 }
 
 if (document.readyState !== 'loading') {
