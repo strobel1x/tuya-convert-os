@@ -2,7 +2,7 @@
 import os
 import logging
 
-from typing import Awaitable, List, Optional
+from typing import Any, Awaitable, List, Optional
 
 from tornado.escape import json_decode, to_unicode
 from tornado.httpclient import AsyncHTTPClient, HTTPClientError
